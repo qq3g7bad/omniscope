@@ -1,0 +1,16 @@
+# Screenshots / data output
+*.png
+*.csv
+
+# Python virtual environment
+venv/
+.venv/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+CLAUDE.md
