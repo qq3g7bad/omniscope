@@ -51,7 +51,8 @@ _GROUPS: list[tuple[str, list[tuple[str, str]]]] = [
         ("set-trigger", "Set trigger settings"),
     ]),
     ("MEASUREMENT COMMANDS", [
-        ("measure", "Read an automatic measurement"),
+        ("list-measures", "List measurement parameters supported by the connected scope"),
+        ("measure",       "Read an automatic measurement"),
     ]),
     ("DATA COMMANDS", [
         ("save-image", "Capture and save a screenshot"),
@@ -71,7 +72,7 @@ def print_main_help() -> None:
     lines.append("")
     lines.append(f"  {BLD}{CYN}USAGE{RST}")
     lines.append("")
-    lines.append(f"    omniscope <command> [flags]")
+    lines.append(f"    omniscope <subcommand> [flags]")
 
     for group, cmds in _GROUPS:
         lines.append("")

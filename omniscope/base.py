@@ -3,6 +3,10 @@ import os
 from abc import ABC, abstractmethod
 from datetime import datetime
 
+MEASURE_PARAMS: tuple[str, ...] = (
+    "freq", "period", "vpp", "vrms", "vmax", "vmin", "vavg", "rise", "fall", "duty",
+)
+
 
 class OscilloscopeBase(ABC):
     """Abstract base class defining the common oscilloscope interface."""
@@ -124,11 +128,14 @@ class OscilloscopeBase(ABC):
     # ── Measurements ─────────────────────────────────────────────────────────
 
     @abstractmethod
+    def measure_params(self) -> list[str]:
+        """Return the list of measurement parameter names supported by this driver."""
+
+    @abstractmethod
     def measure(self, channel: int, param: str) -> float:
         """Return a single automatic measurement for *channel*.
 
-        *param* is one of:
-          freq, period, vpp, vrms, vmax, vmin, vavg, rise, fall, duty
+        *param* is one of the strings returned by measure_params().
         """
 
     # ── Waveform data ─────────────────────────────────────────────────────────

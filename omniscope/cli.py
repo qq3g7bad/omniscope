@@ -6,6 +6,7 @@ import os
 import sys
 
 from omniscope._help import ColorFormatter, print_main_help
+from omniscope.base import MEASURE_PARAMS
 from omniscope.drivers.registry import detect
 
 
@@ -62,6 +63,15 @@ def parse_y_offset(value: str):
 
 
 # ── Output helpers ────────────────────────────────────────────────────────────
+
+def _invert_png(black_path: str) -> str:
+    """Invert a PNG image (white background) and return the new file path."""
+    from PIL import Image, ImageOps
+    img = Image.open(black_path).convert("RGB")
+    white_path = black_path[:-4] + "_white.png"
+    ImageOps.invert(img).save(white_path)
+    return white_path
+
 
 def _print(data: dict, as_json: bool) -> None:
     if as_json:
@@ -198,6 +208,15 @@ def cmd_set_trigger(osc, args):
     print("trigger updated")
 
 
+def cmd_list_measures(osc, args):
+    params = osc.measure_params()
+    if args.json:
+        print(json.dumps(params))
+    else:
+        for p in params:
+            print(p)
+
+
 def cmd_measure(osc, args):
     channels = _channels_from_args(args, [1, 2, 3, 4])
     result = {f"ch{ch}": osc.measure(ch, args.param) for ch in channels}
@@ -206,7 +225,17 @@ def cmd_measure(osc, args):
 
 def cmd_save_image(osc, args):
     path = osc.save_image(args.output or os.getcwd())
-    print(f"saved: {path}")
+    bg = args.bg
+    if bg == "black":
+        print(f"saved: {path}")
+    elif bg == "white":
+        white_path = _invert_png(path)
+        os.remove(path)
+        print(f"saved: {white_path}")
+    else:  # both
+        white_path = _invert_png(path)
+        print(f"saved: {path}")
+        print(f"saved (white): {white_path}")
 
 
 def cmd_save_csv(osc, args):
@@ -219,8 +248,18 @@ def cmd_save_csv(osc, args):
 
 def cmd_save(osc, args):
     output = args.output or os.getcwd()
+    bg = args.bg
     img = osc.save_image(output)
-    print(f"image saved: {img}")
+    if bg == "black":
+        print(f"image saved: {img}")
+    elif bg == "white":
+        white_path = _invert_png(img)
+        os.remove(img)
+        print(f"image saved: {white_path}")
+    else:  # both
+        white_path = _invert_png(img)
+        print(f"image saved: {img}")
+        print(f"image saved (white): {white_path}")
     channels = _channels_from_args(args, [1, 2, 3, 4])
     for ch in channels:
         if osc.get_visible(ch) or getattr(args, f"ch{ch}", False):
@@ -340,11 +379,14 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
              "  omniscope set-channel --ch1 --ch2 --bwlimit on\n"
              "  omniscope set-channel --ch1 --invert on")
     _add_channel_flags(p)
-    p.add_argument("--coupling", metavar="DC|AC|GND",  help="Input coupling")
+    p.add_argument("--coupling", choices=["DC", "AC", "GND"], metavar="DC|AC|GND",
+                   help="Input coupling")
     p.add_argument("--probe",    type=float, metavar="RATIO",
                    help="Probe attenuation ratio (e.g. 10 for 10×)")
-    p.add_argument("--bwlimit",  metavar="on|off",     help="Bandwidth limit (20 MHz)")
-    p.add_argument("--invert",   metavar="on|off",     help="Invert channel signal")
+    p.add_argument("--bwlimit",  choices=["on", "off"], metavar="on|off",
+                   help="Bandwidth limit (20 MHz)")
+    p.add_argument("--invert",   choices=["on", "off"], metavar="on|off",
+                   help="Invert channel signal")
 
     # ── Timebase ─────────────────────────────────────────────────────────────
 
@@ -398,13 +440,21 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
              "  omniscope set-trigger --source CH1 --level 1.0 --slope rising\n"
              "  omniscope set-trigger --sweep normal\n"
              "  omniscope set-trigger --mode edge --sweep auto")
-    p.add_argument("--source", metavar="CH1|CH2|EXT",        help="Trigger source")
-    p.add_argument("--level",  type=float, metavar="V",      help="Trigger level (volts)")
-    p.add_argument("--slope",  metavar="rising|falling|either", help="Edge slope")
-    p.add_argument("--mode",   metavar="edge|pulse|...",     help="Trigger mode")
-    p.add_argument("--sweep",  metavar="auto|normal|single", help="Sweep mode")
+    p.add_argument("--source", metavar="CH1|CH2|EXT", help="Trigger source")
+    p.add_argument("--level",  type=float, metavar="V", help="Trigger level (volts)")
+    p.add_argument("--slope",  choices=["rising", "falling", "either"],
+                   metavar="rising|falling|either", help="Edge slope")
+    p.add_argument("--mode",   metavar="edge|pulse|...", help="Trigger mode")
+    p.add_argument("--sweep",  choices=["auto", "normal", "single"],
+                   metavar="auto|normal|single", help="Sweep mode")
 
     # ── Measurement ──────────────────────────────────────────────────────────
+
+    p = _sub(sub, "list-measures", "List measurement parameters supported by the connected scope",
+             "examples:\n"
+             "  omniscope list-measures\n"
+             "  omniscope list-measures --json")
+    _add_json_flag(p)
 
     p = _sub(sub, "measure", "Read an automatic measurement",
              "examples:\n"
@@ -412,8 +462,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
              "  omniscope measure --ch1 --ch2 --param freq\n"
              "  omniscope measure --ch1 --param vrms --json")
     _add_channel_flags(p)
-    p.add_argument("--param", required=True, metavar="PARAM",
-                   help="freq  period  vpp  vrms  vmax  vmin  vavg  rise  fall  duty")
+    p.add_argument("--param", required=True, choices=MEASURE_PARAMS, metavar="PARAM",
+                   help="  ".join(MEASURE_PARAMS))
     _add_json_flag(p)
 
     # ── Data ─────────────────────────────────────────────────────────────────
@@ -421,8 +471,12 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
     p = _sub(sub, "save-image", "Capture and save a screenshot",
              "examples:\n"
              "  omniscope save-image\n"
-             "  omniscope save-image -o ./captures")
+             "  omniscope save-image --bg white\n"
+             "  omniscope save-image --bg both -o ./captures")
     _add_output_flag(p)
+    p.add_argument("--bg", choices=["black", "white", "both"], default="black",
+                   metavar="black|white|both",
+                   help="Background color: black (default), white, both")
 
     p = _sub(sub, "save-csv", "Download and save waveform data as CSV",
              "examples:\n"
@@ -434,12 +488,21 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
     p = _sub(sub, "save", "Save screenshot and CSV for visible channels",
              "examples:\n"
              "  omniscope save\n"
-             "  omniscope save -o ./out\n"
-             "  omniscope save --ch1 --ch2 -o ./out")
+             "  omniscope save --bg white -o ./out\n"
+             "  omniscope save --bg both --ch1 --ch2 -o ./out")
     _add_channel_flags(p)
     _add_output_flag(p)
+    p.add_argument("--bg", choices=["black", "white", "both"], default="black",
+                   metavar="black|white|both",
+                   help="Background color: black (default), white, both")
 
     return parser, sub._name_parser_map
+
+
+def get_parser() -> argparse.ArgumentParser:
+    """Return just the top-level parser (used by shtab to generate completions)."""
+    parser, _ = build_parser()
+    return parser
 
 
 # ── Pre-connect validators ────────────────────────────────────────────────────
@@ -488,6 +551,7 @@ HANDLERS = {
     "set-y-axis":  cmd_set_y_axis,
     "get-trigger": cmd_get_trigger,
     "set-trigger": cmd_set_trigger,
+    "list-measures": cmd_list_measures,
     "measure":     cmd_measure,
     "save-image":  cmd_save_image,
     "save-csv":    cmd_save_csv,

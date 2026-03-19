@@ -11,6 +11,8 @@ dependencies = [
     "pyvisa",
     "pyvisa-py",
     "pyusb",
+    "pillow",
+    "shtab",
 ]
 
 [project.scripts]
