@@ -147,8 +147,13 @@ class OscilloscopeBase(ABC):
     # ── Screenshot ────────────────────────────────────────────────────────────
 
     @abstractmethod
-    def save_image(self, output_dir: str) -> str:
-        """Capture a screenshot and write it to *output_dir*. Returns the file path."""
+    def save_image(self, output_path: str) -> str:
+        """Capture a screenshot and write it to *output_path*.
+
+        If *output_path* is a directory, drivers should write a timestamped PNG there.
+        If *output_path* is a PNG file path, drivers should write exactly that file.
+        Returns the written file path.
+        """
 
     # ── CSV (built on get_waveform — no driver override needed) ──────────────
 

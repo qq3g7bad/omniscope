@@ -229,7 +229,7 @@ class RigolOscilloscope(OscilloscopeBase):
 
     # ── Screenshot ────────────────────────────────────────────────────────────
 
-    def save_image(self, output_dir: str) -> str:
+    def save_image(self, output_path: str) -> str:
         self._inst.write(":DISP:DATA?")
         raw = self._inst.read_raw()
 
@@ -242,7 +242,7 @@ class RigolOscilloscope(OscilloscopeBase):
 
         image_data = raw[data_offset:data_offset + image_size]
 
-        filename = _timestamped_path(output_dir, ".png")
+        filename = _resolve_image_path(output_path)
         with open(filename, "wb") as f:
             f.write(image_data)
         return filename
@@ -256,3 +256,13 @@ class RigolOscilloscope(OscilloscopeBase):
 def _timestamped_path(directory: str, suffix: str) -> str:
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     return os.path.join(directory, stamp + suffix)
+
+
+def _resolve_image_path(output_path: str) -> str:
+    normalized = os.path.expanduser(output_path)
+    seps = (os.sep,) if os.altsep is None else (os.sep, os.altsep)
+    if os.path.isdir(normalized) or normalized.endswith(seps):
+        return _timestamped_path(normalized.rstrip("/\\"), ".png")
+    if normalized.lower().endswith(".png"):
+        return normalized
+    return _timestamped_path(normalized, ".png")

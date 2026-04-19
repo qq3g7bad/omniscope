@@ -306,6 +306,11 @@ def _add_output_flag(parser: argparse.ArgumentParser) -> None:
                         help="Directory to save files (default: current directory)")
 
 
+def _add_image_output_flag(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("-o", "--output", default=None, metavar="PATH",
+                        help="Directory or .png file path (default: current directory)")
+
+
 def _sub(subparsers, name: str, help: str, epilog: str) -> argparse.ArgumentParser:
     """Add a subparser with ColorFormatter and a pre-formatted epilog."""
     return subparsers.add_parser(
@@ -489,10 +494,11 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
 
     p = _sub(sub, "save-image", "Capture and save a screenshot",
              "examples:\n"
-             "  omniscope save-image\n"
-             "  omniscope save-image --bg white\n"
-             "  omniscope save-image --bg both -o ./captures")
-    _add_output_flag(p)
+              "  omniscope save-image\n"
+              "  omniscope save-image --bg white\n"
+             "  omniscope save-image --bg both -o ./captures\n"
+             "  omniscope save-image -o ./captures/shot.png")
+    _add_image_output_flag(p)
     p.add_argument("--bg", choices=["black", "white", "both"], default="black",
                    metavar="black|white|both",
                    help="Background color: black (default), white, both")
