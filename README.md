@@ -162,6 +162,9 @@ omniscope save-image
 # Save screenshot to a specific directory
 omniscope save-image -o ./captures
 
+# Save screenshot to a specific filename
+omniscope save-image -o ./captures/shot.png
+
 # Save waveform CSV for channels 1 and 2
 omniscope save-csv --ch1 --ch2
 
