@@ -141,6 +141,18 @@ omniscope set-y-axis --ch1 --scale 1.0
 omniscope set-y-axis --ch1 --ch2 --scale 0.5 --offset 0
 ```
 
+### Trigger
+
+```sh
+# Set edge trigger on CH1
+omniscope set-trigger --source CH1 --level 1.0 --slope rising --sweep normal
+
+# Read current trigger settings
+omniscope get-trigger
+```
+
+Use canonical source names in the CLI (`CH1`..`CH4`, `EXT`). Vendor-specific forms are handled internally.
+
 ### Saving data
 
 ```sh

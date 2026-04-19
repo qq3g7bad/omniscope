@@ -62,6 +62,24 @@ def parse_y_offset(value: str):
     return _parse_div_or(value, _float)
 
 
+def parse_trigger_source(value: str) -> str:
+    """Normalize trigger source to canonical UI values: CH1..CH4, EXT."""
+    v = value.strip().upper()
+    alias = {
+        "CHAN1": "CH1",
+        "CHAN2": "CH2",
+        "CHAN3": "CH3",
+        "CHAN4": "CH4",
+        "EXTERNAL": "EXT",
+    }
+    v = alias.get(v, v)
+    if v in {"CH1", "CH2", "CH3", "CH4", "EXT"}:
+        return v
+    raise argparse.ArgumentTypeError(
+        f"invalid trigger source '{value}' — expected CH1, CH2, CH3, CH4, or EXT"
+    )
+
+
 # ── Output helpers ────────────────────────────────────────────────────────────
 
 def _invert_png(black_path: str) -> str:
@@ -440,7 +458,8 @@ def build_parser() -> tuple[argparse.ArgumentParser, dict[str, argparse.Argument
              "  omniscope set-trigger --source CH1 --level 1.0 --slope rising\n"
              "  omniscope set-trigger --sweep normal\n"
              "  omniscope set-trigger --mode edge --sweep auto")
-    p.add_argument("--source", metavar="CH1|CH2|EXT", help="Trigger source")
+    p.add_argument("--source", type=parse_trigger_source, metavar="CH1|CH2|CH3|CH4|EXT",
+                   help="Trigger source")
     p.add_argument("--level",  type=float, metavar="V", help="Trigger level (volts)")
     p.add_argument("--slope",  choices=["rising", "falling", "either"],
                    metavar="rising|falling|either", help="Edge slope")

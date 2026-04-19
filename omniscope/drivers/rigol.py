@@ -24,6 +24,25 @@ _MEASURE_PARAMS = {
 
 _SLOPE_TO_SCPI = {"rising": "POS", "falling": "NEG", "either": "RFAL"}
 _SCPI_TO_SLOPE = {v: k for k, v in _SLOPE_TO_SCPI.items()}
+_TRIGGER_SOURCE_TO_SCPI = {
+    "CH1": "CHAN1",
+    "CH2": "CHAN2",
+    "CH3": "CHAN3",
+    "CH4": "CHAN4",
+    "CHAN1": "CHAN1",
+    "CHAN2": "CHAN2",
+    "CHAN3": "CHAN3",
+    "CHAN4": "CHAN4",
+    "EXT": "EXT",
+    "EXTERNAL": "EXT",
+}
+_SCPI_TO_TRIGGER_SOURCE = {
+    "CHAN1": "CH1",
+    "CHAN2": "CH2",
+    "CHAN3": "CH3",
+    "CHAN4": "CH4",
+    "EXT": "EXT",
+}
 
 
 class RigolOscilloscope(OscilloscopeBase):
@@ -137,7 +156,8 @@ class RigolOscilloscope(OscilloscopeBase):
     def get_trigger(self) -> dict:
         mode   = self._inst.query(":TRIG:MODE?").strip().lower()
         sweep  = self._inst.query(":TRIG:SWE?").strip().lower()
-        source = self._inst.query(":TRIG:EDGE:SOUR?").strip()
+        source_raw = self._inst.query(":TRIG:EDGE:SOUR?").strip().upper()
+        source = _SCPI_TO_TRIGGER_SOURCE.get(source_raw, source_raw)
         level  = float(self._inst.query(":TRIG:EDGE:LEV?").strip())
         slope_raw = self._inst.query(":TRIG:EDGE:SLOP?").strip().upper()
         slope  = _SCPI_TO_SLOPE.get(slope_raw, slope_raw.lower())
@@ -156,7 +176,8 @@ class RigolOscilloscope(OscilloscopeBase):
         if sweep is not None:
             self._inst.write(f":TRIG:SWE {sweep.upper()}")
         if source is not None:
-            self._inst.write(f":TRIG:EDGE:SOUR {source.upper()}")
+            scpi_source = _TRIGGER_SOURCE_TO_SCPI.get(source.upper(), source.upper())
+            self._inst.write(f":TRIG:EDGE:SOUR {scpi_source}")
         if level is not None:
             self._inst.write(f":TRIG:EDGE:LEV {level}")
         if slope is not None:
